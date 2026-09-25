@@ -2,7 +2,11 @@ from django.db import models
 from accounts.models import CustomUser, TimeStampedModel
 
 
-# ----------------------------------------------------Project-----------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------Project-----------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+
 class Project(TimeStampedModel):
     class Visibility(models.TextChoices):
         PRIVATE = 'private', 'Private'
@@ -13,33 +17,33 @@ class Project(TimeStampedModel):
     owner = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
-        related_name='owned_projects'
+        related_name='owned_projects',
     )
     visibility = models.CharField(
         max_length=7,
         choices=Visibility.choices,
-        default=Visibility.PRIVATE
+        default=Visibility.PRIVATE,
     )
     members = models.ManyToManyField(
         CustomUser,
         through='ProjectMember',
         related_name='projects',
+        blank=True,                      # null=True olib tashlandi (W340)
     )
+
     class Meta:
         ordering = ['-created_at']
-        constraints = [
-            models.UniqueConstraint(
-                fields = ['name', 'owner'],
-                name = 'unique_name_owner',
-            )
-        ]
 
     def __str__(self):
         return self.name
 
 
 
-# -------------------------------------------------ProjectMember--------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------ProjectMember--------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+
 class ProjectMember(TimeStampedModel):
     class Role(models.TextChoices):
         ADMIN = 'admin', 'Admin'
@@ -48,28 +52,40 @@ class ProjectMember(TimeStampedModel):
     project = models.ForeignKey(
         Project,
         on_delete=models.CASCADE,
-        related_name='project_members'
+        related_name='project_members',
     )
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
-        related_name='project_memberships'
+        related_name='project_memberships',
     )
+    role = models.CharField(             # yangi: Role bor edi, maydon yo'q edi
+        max_length=6,
+        choices=Role.choices,
+        default=Role.MEMBER,
+    )
+    join_date = models.DateField(blank=True, null=True)
+    left_date = models.DateField(blank=True, null=True)   # hard delete'da ishlatilmaydi
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields = ['project', 'user'],
-                name = 'unique_project_user',
-            )
+                fields=['project', 'user'],
+                name='unique_project_member',
+            ),
         ]
 
     def __str__(self):
-        return f"{self.user} - {self.project}"
+        return f'{self.user} - {self.project}'
 
 
 
 
-# ------------------------------------------------------Task------------------------------------------------------------
+
+#-----------------------------------------------------------------------------------------------------------------------
+#-------------------------------------------------------Task------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------
+
 class Task(TimeStampedModel):
     class Status(models.TextChoices):
         TODO = 'todo', 'ToDo'
@@ -86,7 +102,7 @@ class Task(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name='tasks'
     )
-    title = models.CharField(max_length=200)
+    title = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(
         max_length=11,
