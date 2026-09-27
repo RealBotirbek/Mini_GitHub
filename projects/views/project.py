@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from projects.models import Project, ProjectMember
+from projects.permissions import IsProjectOwnerOrReadOnly
 from projects.serializers.project import (
     ProjectListSerializer,
     ProjectSerializer,
@@ -17,7 +18,7 @@ from projects.serializers.project_member import (
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, ]
+    permission_classes = [IsAuthenticated, IsProjectOwnerOrReadOnly]
 
     def get_queryset(self):
         user = self.request.user
