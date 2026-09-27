@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.models import CustomUser
 from projects.models import Project, ProjectMember
 from projects.permissions import IsProjectOwnerOrReadOnly
 from projects.serializers.project import (
@@ -15,19 +16,26 @@ from projects.serializers.project_member import (
     ProjectMemberIDsSerializer,
     ProjectMemberSerializer,
 )
+from django.contrib.postgres.search import TrigramSimilarity
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, IsProjectOwnerOrReadOnly]
+    # permission_classes = [IsAuthenticated, IsProjectOwnerOrReadOnly]
 
     def get_queryset(self):
+        search_query = self.request.query_params.get('search')
         user = self.request.user
-        return (
-            Project.objects
-            .filter(Q(owner=user) | Q(members=user) | Q(visibility=Project.Visibility.PUBLIC))
-            .distinct()
-            .prefetch_related('members')    # list'da members uchun N+1 yo'q
-        )
+        queryset = Project.objects.all()
+        if search_query:
+            queryset = queryset.annotate(
+                similarity = TrigramSimilarity('name', search_query)
+            ).filter(similarity__gt = 0.3).order_by('-similarity')
+        return queryset
+        # return (
+        #     queryset
+        #     .filter(Q(owner=user) | Q(members=user) | Q(visibility=Project.Visibility.PUBLIC))
+        #     .distinct().prefetch_related('members')    # list'da members uchun N+1 yo'q
+        # )
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):
@@ -36,7 +44,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Faqat Project yaratiladi. ProjectMember bu yerda YARATILMAYDI.
-        serializer.save(owner=self.request.user)
+        serializer.save(owner=CustomUser.objects.get(username='tester1'))
 
     # ---------- /projects/{id}/members/ ----------
 
