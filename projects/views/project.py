@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django.utils import timezone
-from rest_framework import status, viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status, viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,6 +22,10 @@ from django.contrib.postgres.search import TrigramSimilarity
 
 class ProjectViewSet(viewsets.ModelViewSet):
     # permission_classes = [IsAuthenticated, IsProjectOwnerOrReadOnly]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['name']
+    search_field = ['name']
+    serializer_class = ProjectSerializer
 
     def get_queryset(self):
         search_query = self.request.query_params.get('search')
